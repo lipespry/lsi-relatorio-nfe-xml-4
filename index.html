@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Gerador de relatório de XML</title>
+    <style>
+        table {
+            empty-cells: show;
+            border-collapse: collapse;
+            margin: 10px;
+        }
+        table > thead > tr > td,
+        table > tbody > tr > td {
+            border: solid 1px black;
+            padding: 5px;
+        }
+        div#erros {
+            color: red;
+        }
+        div.autor {
+            margin-top: 200px;
+        }
+        @media print {
+            div#erros {
+                display: none;
+            }
+            input {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <input type="file" multiple id="inp_arquivos">
+    <table>
+        <thead>
+            <tr>
+                <td>Número</td>
+                <td>Data de emissão</td>
+                <td>Valor</td>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <div id="erros"></div>
+    <div class="autor">Criado por Felipe M. &lt;felipemdeoliveira@live.com&gt;</div>
+</body>
+<script>
+    var nfe = [];
+    inp = document.getElementById('inp_arquivos');
+    alvo = document.querySelector('table > tbody');
+    alvo_erros = document.getElementById('erros');
+    inp.addEventListener(
+        'change',
+        function() {
+            alvo.innerHTML = '';
+            alvo_erros.innerHTML = '';
+
+            for (let arquivo of inp.files) {
+                var leitor = new FileReader();
+                leitor.readAsText(arquivo, "UTF-8");
+                leitor.onload = (txt) => {
+                    try {
+                        var obj = {}
+
+                        parser = new DOMParser();
+                        xml = parser.parseFromString(
+                            txt.target.result,
+                            'text/xml'
+                        );
+
+                        emissao = new Date(
+                            xml.querySelector(
+                                'NFe > infNFe > ide > dEmi'
+                            ).innerHTML
+                        );
+
+                        obj.emissao = (
+                            String(emissao.getDay()).padStart(2, '0')
+                            +'/'+String(emissao.getMonth()).padStart(2, '0')
+                            +'/'+emissao.getFullYear()
+                        );
+
+                        obj.numero = xml.querySelector(
+                            'NFe > infNFe > ide > nNF'
+                        ).innerHTML;
+
+                        obj.valor = xml.querySelector(
+                            'NFe > infNFe > total > ICMSTot > vNF'
+                        ).innerHTML;
+
+                        var tr = document.createElement('tr');
+
+                        var td_numero = document.createElement('td');
+                        td_numero.innerText = obj.numero;
+                        tr.appendChild(td_numero);
+
+                        var td_emissao = document.createElement('td');
+                        td_emissao.innerText = obj.emissao;
+                        tr.appendChild(td_emissao);
+
+                        var td_valor = document.createElement('td');
+                        td_valor.innerText = obj.valor;
+                        tr.appendChild(td_valor);
+
+                        alvo.appendChild(tr);
+                    } catch {
+                        var p = document.createElement('p');
+                        p.innerText = (
+                            'O arquivo \''
+                            +arquivo.name
+                            +'\' não é um XML de NFe válido.'
+                        );
+                        alvo_erros.appendChild(p);
+                    }
+                }
+            }
+        },
+        false
+    );
+</script>
+</html>
